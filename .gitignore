@@ -1,0 +1,22 @@
+# Node
+node_modules/
+dist/
+.vite/
+pnpm-lock.yaml
+
+# Tauri / Rust
+src-tauri/target/
+src-tauri/gen/
+*.log
+
+# OS
+.DS_Store
+
+# Local DB / backups
+*.db
+*.sqlite
+*.sqlite3
+
+# Env
+.env
+.env.*
