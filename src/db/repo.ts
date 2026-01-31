@@ -18,6 +18,16 @@ export async function addWord(input: Omit<WordEntry, "id" | "created_at" | "upda
   const db = await getDb();
   const now = Date.now();
   const id = uuidv4();
+  const normalizedTerm = input.term.trim();
+  const normalizedMeaningTr = input.meaning_tr.trim();
+
+  const existing = await db.select<Array<{ id: string }>>(
+    `SELECT id FROM word_entries WHERE lower(term) = lower(?) LIMIT 1`,
+    [normalizedTerm]
+  );
+  if (existing.length > 0) {
+    throw new Error("Bu terim zaten ekli.");
+  }
 
   await db.execute(
     `INSERT INTO word_entries
@@ -25,8 +35,8 @@ export async function addWord(input: Omit<WordEntry, "id" | "created_at" | "upda
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       id,
-      input.term.trim(),
-      input.meaning_tr.trim(),
+      normalizedTerm,
+      normalizedMeaningTr,
       input.meaning_en ?? null,
       input.example_en ?? null,
       input.part_of_speech ?? null,

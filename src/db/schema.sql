@@ -46,4 +46,5 @@ CREATE INDEX IF NOT EXISTS idx_review_log_time ON review_log(reviewed_at DESC);
 
 -- 🚫 prevent duplicate terms
 CREATE UNIQUE INDEX IF NOT EXISTS uniq_word_term
-ON word_entries(term);
+CREATE UNIQUE INDEX IF NOT EXISTS uniq_word_term_lower
+ON word_entries(lower(term));
