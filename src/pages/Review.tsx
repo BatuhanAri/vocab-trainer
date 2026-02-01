@@ -1,12 +1,33 @@
 import { useEffect, useState } from "react";
-import { getCardsByLevelRange, getDueCards, reviewCard } from "../db/repo";
+import { getCardsByIds, getCardsByLevelRange, getDueCards, reviewCard } from "../db/repo";
 import type { DueCard } from "../db/repo";
 
+const UNLEARNED_STORAGE_KEY = "review.unlearnedIds";
+
+function readUnlearnedIds(): string[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = window.localStorage.getItem(UNLEARNED_STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((id) => typeof id === "string");
+  } catch {
+    return [];
+  }
+}
+
+function persistUnlearnedIds(ids: string[]) {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(UNLEARNED_STORAGE_KEY, JSON.stringify(ids));
+}
 
 export default function Review() {
   const [cards, setCards] = useState<DueCard[]>([]);
   const [err, setErr] = useState("");
   const [loading, setLoading] = useState(false);
+  const [unlearnedIds, setUnlearnedIds] = useState<string[]>([]);
+
 
   async function load() {
     setErr("");
@@ -21,7 +42,28 @@ export default function Review() {
     }
   }
 
+    async function loadUnlearned() {
+    setErr("");
+    setLoading(true);
+    try {
+      const res = await getCardsByIds(unlearnedIds);
+      setCards(res);
+      const fetchedIds = new Set(res.map((card) => card.id));
+      if (fetchedIds.size !== unlearnedIds.length) {
+        const nextIds = unlearnedIds.filter((id) => fetchedIds.has(id));
+        setUnlearnedIds(nextIds);
+        persistUnlearnedIds(nextIds);
+      }
+    } catch (e: any) {
+      setErr(e?.message ?? "Hata");
+    } finally {
+      setLoading(false);
+    }
+  }
+
   useEffect(() => {
+    const savedIds = readUnlearnedIds();
+    setUnlearnedIds(savedIds);
     load();
   }, []);
 
@@ -45,10 +87,24 @@ export default function Review() {
     try {
       await reviewCard(current.id, g, "TR->EN");
       setCards((prev) => prev.slice(1)); // UI'den düşür
+            setUnlearnedIds((prev) => {
+        const next = new Set(prev);
+        if (g === 5) {
+          next.delete(current.id);
+        } else {
+          next.add(current.id);
+        }
+        const ids = Array.from(next);
+        persistUnlearnedIds(ids);
+        return ids;
+      });
     } catch (e: any) {
       setErr(e?.message ?? "Review hata");
     }
   }
+
+  const unlearnedCount = unlearnedIds.length;
+
 
   return (
     <section className="page">
@@ -61,12 +117,22 @@ export default function Review() {
         <div className="status-pill">
           Due: <strong>{cards.length}</strong> {loading ? "• loading..." : ""}
         </div>
-        <button className="button ghost" onClick={load}>
-          Refresh
-        </button>
+        <div className="status-actions">
+          <div className="status-pill">
+            Öğrenilmemiş: <strong>{unlearnedCount}</strong>
+          </div>
+          <button
+            className="button ghost"
+            onClick={unlearnedCount > 0 ? loadUnlearned : load}
+            disabled={loading}
+          >
+            Refresh
+          </button>
+        </div>
       </div>
-      
+
        <div className="status-actions">
+          <span className="learn-label">Öğren</span>
           <button
             className="button ghost"
             onClick={() => loadByLevel(1, 2)}

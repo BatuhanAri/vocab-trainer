@@ -115,6 +115,19 @@ export async function getCardsByLevelRange(
     [minLevel, maxLevel, limit]
   );
 }
+export async function getCardsByIds(ids: string[]): Promise<DueCard[]> {
+  if (ids.length === 0) return [];
+  const db = await getDb();
+  const placeholders = ids.map(() => "?").join(", ");
+  return await db.select<DueCard[]>(
+    `SELECT w.*, s.due_at, s.ease, s.interval_days, s.repetitions, s.lapses
+     FROM srs_state s
+     JOIN word_entries w ON w.id = s.word_entry_id
+     WHERE w.id IN (${placeholders})
+     ORDER BY s.due_at ASC`,
+    ids
+  );
+}
 export async function reviewCard(
   wordId: string,
   grade: 0 | 3 | 5,
