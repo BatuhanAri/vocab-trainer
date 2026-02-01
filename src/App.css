@@ -154,6 +154,13 @@
   gap: 12px;
   flex-wrap: wrap;
 }
+/* Status Actions Styles */
+.status-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
 /* Status Pill Styles */
 .status-pill {
   background: #eef2ff;

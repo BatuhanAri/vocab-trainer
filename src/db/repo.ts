@@ -99,6 +99,22 @@ export async function getDueCards(limit = 50): Promise<DueCard[]> {
     [now, limit]
   );
 }
+export async function getCardsByLevelRange(
+  minLevel: number,
+  maxLevel: number,
+  limit = 50
+): Promise<DueCard[]> {
+  const db = await getDb();
+  return await db.select<DueCard[]>(
+    `SELECT w.*, s.due_at, s.ease, s.interval_days, s.repetitions, s.lapses
+     FROM srs_state s
+     JOIN word_entries w ON w.id = s.word_entry_id
+     WHERE w.level BETWEEN ? AND ?
+     ORDER BY s.due_at ASC
+     LIMIT ?`,
+    [minLevel, maxLevel, limit]
+  );
+}
 export async function reviewCard(
   wordId: string,
   grade: 0 | 3 | 5,
