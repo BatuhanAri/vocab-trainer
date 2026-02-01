@@ -3,31 +3,39 @@ import AddWord from "./pages/AddWord";
 import Library from "./pages/Library";
 import Review from "./pages/Review";
 
-const linkStyle = ({ isActive }: { isActive: boolean }) => ({
-  padding: "8px 12px",
-  borderRadius: 8,
-  textDecoration: "none",
-  color: isActive ? "white" : "#111",
-  background: isActive ? "#111" : "#eee",
-  marginRight: 8,
-});
+import "./App.css";
+
 
 export default function App() {
   return (
     <HashRouter>
-      <div style={{ padding: 16, fontFamily: "system-ui, sans-serif" }}>
-        <div style={{ marginBottom: 16 }}>
-          <NavLink to="/add" style={linkStyle}>Add</NavLink>
-          <NavLink to="/library" style={linkStyle}>Library</NavLink>
-          <NavLink to="/review" style={linkStyle}>Review</NavLink>
-        </div>
+      <div className="app-shell">
+        <header className="app-header">
+          <div>
+            <p className="app-kicker">Vocab Trainer</p>
+            <h1>Kelime çalışmalarını takip et</h1>
+          </div>
+          <nav className="app-nav">
+            <NavLink to="/add" className={({ isActive }) => `nav-link${isActive ? " active" : ""}`}>
+              Add Word
+            </NavLink>
+            <NavLink to="/library" className={({ isActive }) => `nav-link${isActive ? " active" : ""}`}>
+              Library
+            </NavLink>
+            <NavLink to="/review" className={({ isActive }) => `nav-link${isActive ? " active" : ""}`}>
+              Review
+            </NavLink>
+          </nav>
+        </header>
 
-        <Routes>
-          <Route path="/" element={<AddWord />} />
-          <Route path="/add" element={<AddWord />} />
-          <Route path="/library" element={<Library />} />
-          <Route path="/review" element={<Review />} />
-        </Routes>
+        <main className="app-content">
+          <Routes>
+            <Route path="/" element={<AddWord />} />
+            <Route path="/add" element={<AddWord />} />
+            <Route path="/library" element={<Library />} />
+            <Route path="/review" element={<Review />} />
+          </Routes>
+        </main>
       </div>
     </HashRouter>
   );

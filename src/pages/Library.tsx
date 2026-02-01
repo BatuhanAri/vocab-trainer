@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { listWords } from "../db/repo";
+import { deleteWord, listWords } from "../db/repo";
 import type { WordEntry } from "../db/repo";
 
 
@@ -7,6 +7,8 @@ export default function Library() {
   const [q, setQ] = useState("");
   const [items, setItems] = useState<WordEntry[]>([]);
   const [err, setErr] = useState<string>("");
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
 
   async function load(query?: string) {
     setErr("");
@@ -22,49 +24,87 @@ export default function Library() {
     load("");
   }, []);
 
+ async function handleDelete(word: WordEntry) {
+    const confirmed = window.confirm(`"${word.term}" kelimesi silinsin mi?`);
+    if (!confirmed) return;
+    setDeletingId(word.id);
+    setErr("");
+    try {
+      await deleteWord(word.id);
+      setItems((prev) => prev.filter((item) => item.id !== word.id));
+    } catch (e: any) {
+      setErr(e?.message ?? "Silme başarısız oldu");
+    } finally {
+      setDeletingId(null);
+    }
+  }
+
   return (
-    <div>
-      <h2>Library</h2>
-
-      <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
-        <input
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          placeholder="Ara: term veya TR anlam"
-          style={{ padding: 10, width: 360 }}
-        />
-        <button onClick={() => load(q)} style={{ padding: 10, cursor: "pointer" }}>
-          Search
-        </button>
-        <button onClick={() => { setQ(""); load(""); }} style={{ padding: 10, cursor: "pointer" }}>
-          Reset
-        </button>
-      </div>
-
-      <div style={{ marginBottom: 10, opacity: 0.8 }}>
-        Total: {items.length}
-      </div>
-
-      {err && <p>{err}</p>}
-
-      <div style={{ display: "grid", gap: 8 }}>
-        {items.map((w) => (
-          <div
-            key={w.id}
-            style={{
-              padding: 12,
-              border: "1px solid #ddd",
-              borderRadius: 10,
+    <section className="page">
+      <header className="page-header">
+        <h2 className="page-title">Kelime Kütüphanesi</h2>
+        <p className="page-subtitle">Tüm kelimeleri ara, filtrele ve yönet.</p>
+      </header>
+      <div className="toolbar">
+        <div className="search-bar">
+          <input
+            className="input"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Ara: term veya TR anlam"
+          />
+          <button onClick={() => load(q)} className="button primary">
+            Search
+          </button>
+          <button
+            onClick={() => {
+              setQ("");
+              load("");
             }}
+                        className="button ghost"
+
           >
-            <div style={{ fontWeight: 700 }}>{w.term}</div>
-            <div style={{ opacity: 0.85 }}>{w.meaning_tr}</div>
-            <div style={{ fontSize: 12, opacity: 0.6 }}>
-              level: {w.level ?? "-"}
-            </div>
-          </div>
-        ))}
+            Reset
+          </button>
+        </div>
+        <div className="status-pill">
+          Total: <strong>{items.length}</strong>
+        </div>
       </div>
-    </div>
-  );
+    
+    {err && <p className="error-text">{err}</p>}
+
+      {items.length === 0 ? (
+        <div className="card empty-state">
+          Kütüphanede kelime yok.
+          <p>Yeni kelime ekleyerek başlayabilirsin.</p>
+        </div>
+      ) : (
+        <div className="card-grid">
+          {items.map((w) => (
+            <article key={w.id} className="card word-card">
+              <div className="word-header">
+                <div>
+                  <h3>{w.term}</h3>
+                  <p>{w.meaning_tr}</p>
+                </div>
+                <span className="level-pill">Level {w.level ?? "-"}</span>
+              </div>
+              <div className="word-meta">
+                <span>Updated: {new Date(w.updated_at).toLocaleDateString()}</span>
+              </div>
+              <div className="button-row">
+                <button
+                  className="button danger"
+                  onClick={() => handleDelete(w)}
+                  disabled={deletingId === w.id}
+                >
+                  {deletingId === w.id ? "Deleting..." : "Delete"}
+                </button>
+              </div>
+            </article>
+          ))}
+        </div>
+      )}
+    </section>  );
 }

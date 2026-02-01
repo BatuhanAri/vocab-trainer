@@ -10,7 +10,9 @@ export default function AddWord() {
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setMsg("");
-
+    // input validation
+    // term
+    // meaning_tr
     try {
       await addWord({
         term,
@@ -49,52 +51,62 @@ export default function AddWord() {
       }
     }
   }
-
+  // UI
   return (
-    <div style={{ maxWidth: 520 }}>
-      <h2>Add Word</h2>
+    // Add Word Page
+    <section className="page">
+      <header className="page-header">
+        <h2 className="page-title">Yeni Kelime Ekle</h2>
+        <p className="page-subtitle">Kütüphaneni düzenli ve temiz tut.</p>
+      </header>
+      
+      <div className="card form-card">
+        <form onSubmit={onSubmit} className="form-grid">
+          <label className="field">
+            Term
+            <input
+              className="input"
+              value={term}
+              onChange={(e) => setTerm(e.target.value)}
+              placeholder="take off"
+            />
+          </label>
+          
+          <label className="field">
+            TR Meaning
+            <input
+              className="input"
+              value={meaningTr}
+              onChange={(e) => setMeaningTr(e.target.value)}
+              placeholder="havalanmak"
+            />
+          </label>
 
-      <form onSubmit={onSubmit} style={{ display: "grid", gap: 10 }}>
-        <label>
-          Term
-          <input
-            value={term}
-            onChange={(e) => setTerm(e.target.value)}
-            style={{ width: "100%", padding: 10, marginTop: 6 }}
-            placeholder="take off"
-          />
-        </label>
+          <label className="field">
+            Level (1-5)
+            <input
+              className="input"
+              type="number"
+              min={1}
+              max={5}
+              value={level}
+              onChange={(e) => setLevel(e.target.value === "" ? "" : Number(e.target.value))}
+            />
+          </label>
 
-        <label>
-          TR Meaning
-          <input
-            value={meaningTr}
-            onChange={(e) => setMeaningTr(e.target.value)}
-            style={{ width: "100%", padding: 10, marginTop: 6 }}
-            placeholder="havalanmak"
-          />
-        </label>
-
-        <label>
-          Level (1-5)
-          <input
-            type="number"
-            min={1}
-            max={5}
-            value={level}
-            onChange={(e) => setLevel(e.target.value === "" ? "" : Number(e.target.value))}
-            style={{ width: "100%", padding: 10, marginTop: 6 }}
-          />
-        </label>
-
-        <button style={{ padding: 12, cursor: "pointer" }}>Save</button>
-      </form>
+          <div className="form-actions">
+            <button className="button primary" type="submit">
+              Save Word
+            </button>
+          </div>
+        </form>
+      </div>
 
       {msg && (
-        <pre style={{ marginTop: 12, whiteSpace: "pre-wrap" }}>
+        <div className="toast">
           {msg}
-        </pre>
+        </div>
       )}
-    </div>
+    </section>
   );
 }

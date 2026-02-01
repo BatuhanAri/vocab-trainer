@@ -73,6 +73,11 @@ export async function listWords(q?: string): Promise<WordEntry[]> {
   );
 }
 
+export async function deleteWord(id: string) {
+  const db = await getDb();
+  await db.execute(`DELETE FROM word_entries WHERE id = ?`, [id]);
+}
+
 export type DueCard = WordEntry & {
   due_at: number;
   ease: number;

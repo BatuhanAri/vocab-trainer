@@ -38,45 +38,50 @@ export default function Review() {
   }
 
   return (
-    <div style={{ maxWidth: 560 }}>
-      <h2>Review</h2>
+    <section className="page">
+      <header className="page-header">
+        <h2 className="page-title">Tekrar Zamanı</h2>
+        <p className="page-subtitle">Günlük kartlarını hızlıca gözden geçir.</p>
+      </header>
 
-      <div style={{ marginBottom: 10, opacity: 0.8 }}>
-        Due: {cards.length} {loading ? "(loading...)" : ""}
+      <div className="status-row">
+        <div className="status-pill">
+          Due: <strong>{cards.length}</strong> {loading ? "• loading..." : ""}
+        </div>
+        <button className="button ghost" onClick={load}>
+          Refresh
+        </button>
       </div>
 
-      {err && <p>{err}</p>}
+      {err && <p className="error-text">{err}</p>}
 
       {!current ? (
-        <div style={{ padding: 16, border: "1px solid #ddd", borderRadius: 12 }}>
+        <div className="card empty-state">
           Bugün due kart yok ✅
-          <div style={{ marginTop: 10 }}>
-            <button onClick={load} style={{ padding: 10, cursor: "pointer" }}>Refresh</button>
-          </div>
+          <p>Yeni kelimeler ekleyerek çalışma akışını güçlendirebilirsin.</p>
         </div>
       ) : (
-        <div style={{ padding: 16, border: "1px solid #ddd", borderRadius: 12 }}>
-          <div style={{ fontSize: 12, opacity: 0.7, marginBottom: 6 }}>TR → EN</div>
-          <div style={{ fontSize: 26, fontWeight: 800, marginBottom: 10 }}>
-            {current.meaning_tr}
-          </div>
-          <div style={{ opacity: 0.8, marginBottom: 14 }}>
-            <span style={{ fontWeight: 700 }}>Term:</span> {current.term}
+        <div className="card review-card">
+          <div className="review-direction">TR → EN</div>
+          <div className="review-prompt">{current.meaning_tr}</div>
+          <div className="review-answer">
+            <span>Term:</span> {current.term}
+
           </div>
 
-          <div style={{ display: "flex", gap: 10 }}>
-            <button onClick={() => grade(0)} style={{ padding: 12, cursor: "pointer" }}>
+          <div className="button-row">
+            <button onClick={() => grade(0)} className="button danger">
               Unuttum (0)
             </button>
-            <button onClick={() => grade(3)} style={{ padding: 12, cursor: "pointer" }}>
+            <button onClick={() => grade(3)} className="button warning">
               Zor (3)
             </button>
-            <button onClick={() => grade(5)} style={{ padding: 12, cursor: "pointer" }}>
+            <button onClick={() => grade(5)} className="button success">
               Kolay (5)
             </button>
           </div>
         </div>
       )}
-    </div>
+    </section>
   );
 }
