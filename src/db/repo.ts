@@ -28,7 +28,7 @@ export async function addWord(input: NewWordInput) {
     [normalizedTerm]
   );
   if (existing.length > 0) {
-    throw new Error("Bu terim zaten ekli.");
+    throw new Error("This term already exists.");
   }
 
   await db.execute(
@@ -90,7 +90,7 @@ export async function addWordsBatch(inputs: NewWordInput[]) {
     }
   }
   if (duplicates.length > 0) {
-    throw new Error(`Listede tekrarlı terimler var: ${[...new Set(duplicates)].join(", ")}`);
+    throw new Error(`Duplicate terms in the list: ${[...new Set(duplicates)].join(", ")}`);
   }
 
   const placeholders = normalizedLowerTerms.map(() => "?").join(", ");
@@ -99,7 +99,7 @@ export async function addWordsBatch(inputs: NewWordInput[]) {
     normalizedLowerTerms
   );
   if (existing.length > 0) {
-    throw new Error(`Zaten ekli terimler var: ${existing.map((row) => row.term).join(", ")}`);
+    throw new Error(`Already existing terms: ${existing.map((row) => row.term).join(", ")}`);
   }
 
   await db.execute("BEGIN");
@@ -233,7 +233,7 @@ export async function reviewCard(
   );
 
   if (!rows.length) {
-    throw new Error("SRS state bulunamadı");
+    throw new Error("SRS state not found");
   }
 
   let { ease, interval_days, repetitions, lapses } = rows[0];

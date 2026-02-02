@@ -13,7 +13,7 @@ export default function App() {
         <header className="app-header">
           <div>
             <p className="app-kicker">Vocab Trainer</p>
-            <h1>Kelime çalışmalarını takip et</h1>
+            <h1>Track your vocabulary practice</h1>
           </div>
           <nav className="app-nav">
             <NavLink to="/add" className={({ isActive }) => `nav-link${isActive ? " active" : ""}`}>

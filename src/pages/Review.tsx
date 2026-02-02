@@ -3,6 +3,7 @@ import { getCardsByIds, getCardsByLevelRange, getDueCards, reviewCard } from "..
 import type { DueCard } from "../db/repo";
 
 const UNLEARNED_STORAGE_KEY = "review.unlearnedIds";
+const DIRECTION_STORAGE_KEY = "review.direction";
 
 function readUnlearnedIds(): string[] {
   if (typeof window === "undefined") return [];
@@ -22,11 +23,23 @@ function persistUnlearnedIds(ids: string[]) {
   window.localStorage.setItem(UNLEARNED_STORAGE_KEY, JSON.stringify(ids));
 }
 
+function readDirection(): "EN->TR" | "TR->EN" {
+  if (typeof window === "undefined") return "EN->TR";
+  const raw = window.localStorage.getItem(DIRECTION_STORAGE_KEY);
+  return raw === "TR->EN" ? "TR->EN" : "EN->TR";
+}
+
+function persistDirection(next: "EN->TR" | "TR->EN") {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(DIRECTION_STORAGE_KEY, next);
+}
+
 export default function Review() {
   const [cards, setCards] = useState<DueCard[]>([]);
   const [err, setErr] = useState("");
   const [loading, setLoading] = useState(false);
   const [unlearnedIds, setUnlearnedIds] = useState<string[]>([]);
+  const [direction, setDirection] = useState<"EN->TR" | "TR->EN">("EN->TR");
 
 
   async function load() {
@@ -36,7 +49,7 @@ export default function Review() {
       const res = await getDueCards(50);
       setCards(res);
     } catch (e: any) {
-      setErr(e?.message ?? "Hata");
+      setErr(e?.message ?? "Error");
     } finally {
       setLoading(false);
     }
@@ -55,7 +68,7 @@ export default function Review() {
         persistUnlearnedIds(nextIds);
       }
     } catch (e: any) {
-      setErr(e?.message ?? "Hata");
+      setErr(e?.message ?? "Error");
     } finally {
       setLoading(false);
     }
@@ -64,6 +77,7 @@ export default function Review() {
   useEffect(() => {
     const savedIds = readUnlearnedIds();
     setUnlearnedIds(savedIds);
+    setDirection(readDirection());
     load();
   }, []);
 
@@ -74,7 +88,7 @@ export default function Review() {
       const res = await getCardsByLevelRange(minLevel, maxLevel, 50);
       setCards(res);
     } catch (e: any) {
-      setErr(e?.message ?? "Hata");
+      setErr(e?.message ?? "Error");
     } finally {
       setLoading(false);
     }
@@ -85,7 +99,7 @@ export default function Review() {
   async function grade(g: 0 | 3 | 5) {
     if (!current) return;
     try {
-      await reviewCard(current.id, g, "EN->TR");
+      await reviewCard(current.id, g, direction);
       setCards((prev) => prev.slice(1)); // UI'den düşür
             setUnlearnedIds((prev) => {
         const next = new Set(prev);
@@ -99,18 +113,22 @@ export default function Review() {
         return ids;
       });
     } catch (e: any) {
-      setErr(e?.message ?? "Review hata");
+      setErr(e?.message ?? "Review error");
     }
   }
 
   const unlearnedCount = unlearnedIds.length;
 
+  function handleDirectionChange(next: "EN->TR" | "TR->EN") {
+    setDirection(next);
+    persistDirection(next);
+  }
 
   return (
     <section className="page">
       <header className="page-header">
-        <h2 className="page-title">Tekrar Zamanı</h2>
-        <p className="page-subtitle">Günlük kartlarını hızlıca gözden geçir.</p>
+        <h2 className="page-title">Review Time</h2>
+        <p className="page-subtitle">Quickly review your daily cards.</p>
       </header>
 
       <div className="status-row">
@@ -119,7 +137,7 @@ export default function Review() {
         </div>
         <div className="status-actions">
           <div className="status-pill">
-            Öğrenilmemiş: <strong>{unlearnedCount}</strong>
+            Unlearned: <strong>{unlearnedCount}</strong>
           </div>
           <button
             className="button ghost"
@@ -132,27 +150,27 @@ export default function Review() {
       </div>
 
        <div className="status-actions">
-          <span className="learn-label">Öğren</span>
+          <span className="learn-label">Practice</span>
           <button
             className="button ghost"
             onClick={() => loadByLevel(1, 2)}
             disabled={loading}
           >
-            Kolay (1-2)
+            Easy (1-2)
           </button>
           <button
             className="button ghost"
             onClick={() => loadByLevel(3, 4)}
             disabled={loading}
           >
-            Orta (3-4)
+            Medium (3-4)
           </button>
           <button
             className="button ghost"
             onClick={() => loadByLevel(5, 5)}
             disabled={loading}
           >
-            Zor (5)
+            Hard (5)
           </button>
         </div>
 
@@ -160,27 +178,45 @@ export default function Review() {
 
       {!current ? (
         <div className="card empty-state">
-          Bugün due kart yok ✅
-          <p>Yeni kelimeler ekleyerek çalışma akışını güçlendirebilirsin.</p>
+          No due cards today ✅
+          <p>Add new words to build your practice flow.</p>
         </div>
       ) : (
         <div className="card review-card">
-          <div className="review-direction">EN → TR</div>
-          <div className="review-prompt">{current.term}</div>
+          <div className="review-direction">{direction.replace("->", " → ")}</div>
+          <div className="review-prompt">
+            {direction === "EN->TR" ? current.term : current.meaning_tr}
+          </div>
           <div className="review-answer">
-            <span>Türkçe:</span> {current.meaning_tr}
+            <span>{direction === "EN->TR" ? "Turkish:" : "English:"}</span>{" "}
+            {direction === "EN->TR" ? current.meaning_tr : current.term}
 
           </div>
 
           <div className="button-row">
+            <button
+              onClick={() => handleDirectionChange("EN->TR")}
+              className={`button ${direction === "EN->TR" ? "primary" : "ghost"}`}
+            >
+              EN → TR
+            </button>
+            <button
+              onClick={() => handleDirectionChange("TR->EN")}
+              className={`button ${direction === "TR->EN" ? "primary" : "ghost"}`}
+            >
+              TR → EN
+            </button>
+          </div>
+
+          <div className="button-row">
             <button onClick={() => grade(0)} className="button danger">
-              Unuttum (0)
+              Forgot (0)
             </button>
             <button onClick={() => grade(3)} className="button warning">
-              Zor (3)
+              Hard (3)
             </button>
             <button onClick={() => grade(5)} className="button success">
-              Kolay (5)
+              Easy (5)
             </button>
           </div>
         </div>

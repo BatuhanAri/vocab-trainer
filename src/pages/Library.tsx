@@ -16,7 +16,7 @@ export default function Library() {
       const res = await listWords(query);
       setItems(res);
     } catch (e: any) {
-      setErr(e?.message ?? "Hata");
+      setErr(e?.message ?? "Error");
     }
   }
 
@@ -25,7 +25,7 @@ export default function Library() {
   }, []);
 
  async function handleDelete(word: WordEntry) {
-    const confirmed = window.confirm(`"${word.term}" kelimesi silinsin mi?`);
+    const confirmed = window.confirm(`Delete "${word.term}"?`);
     if (!confirmed) return;
     setDeletingId(word.id);
     setErr("");
@@ -33,7 +33,7 @@ export default function Library() {
       await deleteWord(word.id);
       setItems((prev) => prev.filter((item) => item.id !== word.id));
     } catch (e: any) {
-      setErr(e?.message ?? "Silme başarısız oldu");
+      setErr(e?.message ?? "Delete failed");
     } finally {
       setDeletingId(null);
     }
@@ -42,8 +42,8 @@ export default function Library() {
   return (
     <section className="page">
       <header className="page-header">
-        <h2 className="page-title">Kelime Kütüphanesi</h2>
-        <p className="page-subtitle">Tüm kelimeleri ara, filtrele ve yönet.</p>
+        <h2 className="page-title">Word Library</h2>
+        <p className="page-subtitle">Search, filter, and manage all words.</p>
       </header>
       <div className="toolbar">
         <div className="search-bar">
@@ -51,7 +51,7 @@ export default function Library() {
             className="input"
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="Ara: term veya TR anlam"
+            placeholder="Search: term or Turkish meaning"
           />
           <button onClick={() => load(q)} className="button primary">
             Search
@@ -76,8 +76,8 @@ export default function Library() {
 
       {items.length === 0 ? (
         <div className="card empty-state">
-          Kütüphanede kelime yok.
-          <p>Yeni kelime ekleyerek başlayabilirsin.</p>
+          No words in the library.
+          <p>Add new words to get started.</p>
         </div>
       ) : (
         <div className="card-grid">

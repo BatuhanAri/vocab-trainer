@@ -23,7 +23,7 @@ export default function AddWord() {
     const normalizedMeaningTr = cleanText(meaningTr);
     const normalizedCategory = cleanText(category);
     if (!normalizedTerm || !normalizedMeaningTr || !normalizedCategory || level === "") {
-      setMsg("Term, TR Meaning, Category ve Level zorunludur.");
+      setMsg("Term, Turkish Meaning, Category, and Level are required.");
       return;
     }
     try {
@@ -41,7 +41,7 @@ export default function AddWord() {
       setMeaningTr("");
       setCategory("");
       setLevel("");
-      setMsg("Kaydedildi ✅");
+      setMsg("Saved ✅");
     } catch (err: unknown) {
       console.error("ADD WORD ERROR (raw):", err);
 
@@ -91,25 +91,25 @@ export default function AddWord() {
       const lineNo = index + 1;
       const parts = line.split("|").map((part) => cleanText(part));
       if (parts.length !== 4) {
-        errors.push(`Satır ${lineNo}: Format term | tr | category | level olmalı.`);
+        errors.push(`Line ${lineNo}: Format must be term | tr | category | level.`);
         return;
       }
 
       const [termRaw, trRaw, categoryRaw, levelRaw] = parts;
       if (!termRaw || !trRaw || !categoryRaw || !levelRaw) {
-        errors.push(`Satır ${lineNo}: Tüm alanlar zorunludur.`);
+        errors.push(`Line ${lineNo}: All fields are required.`);
         return;
       }
 
       const levelParsed = Number(levelRaw);
       if (!Number.isInteger(levelParsed) || levelParsed < 1 || levelParsed > 5) {
-        errors.push(`Satır ${lineNo}: Level 1-5 arası tam sayı olmalı.`);
+        errors.push(`Line ${lineNo}: Level must be an integer between 1 and 5.`);
         return;
       }
 
       const dedupeKey = termRaw.toLowerCase();
       if (seen.has(dedupeKey)) {
-        errors.push(`Satır ${lineNo}: Aynı term birden fazla kez var.`);
+        errors.push(`Line ${lineNo}: Duplicate term in the list.`);
         return;
       }
       seen.add(dedupeKey);
@@ -138,12 +138,12 @@ export default function AddWord() {
     const { entries, errors } = parseBulkLines(bulkText);
     if (errors.length > 0) {
       setBulkErrors(errors);
-      setBulkMsg(`Ekleme yapılmadı. ${errors.length} satır hatalı.`);
+      setBulkMsg(`Nothing was added. ${errors.length} invalid lines.`);
       return;
     }
     if (entries.length === 0) {
-      setBulkErrors(["En az bir satır eklemelisin."]);
-      setBulkMsg("Ekleme yapılmadı. 0 geçerli satır.");
+      setBulkErrors(["Add at least one line."]);
+      setBulkMsg("Nothing was added. 0 valid lines.");
       return;
     }
 
@@ -153,34 +153,34 @@ export default function AddWord() {
         const existingSet = new Set(existing);
         const existingErrors = entries
           .filter((entry) => existingSet.has(entry.termLower))
-          .map((entry) => `Satır ${entry.lineNo}: Bu term zaten ekli.`);
+          .map((entry) => `Line ${entry.lineNo}: This term already exists.`);
         setBulkErrors(existingErrors);
-        setBulkMsg(`Ekleme yapılmadı. ${existingErrors.length} satır zaten kayıtlı.`);
+        setBulkMsg(`Nothing was added. ${existingErrors.length} lines already exist.`);
         return;
       }
 
       const addedCount = await addWordsBatch(entries);
-      setBulkMsg(`${addedCount} kelime eklendi ✅`);
+      setBulkMsg(`${addedCount} words added ✅`);
       setBulkText("");
     } catch (err: unknown) {
       console.error("BULK ADD ERROR (raw):", err);
 
       const rawMessage = typeof err === "string" ? err : err instanceof Error ? err.message : "";
-      if (rawMessage.startsWith("Zaten ekli terimler var:")) {
-        const termPart = rawMessage.replace("Zaten ekli terimler var:", "").trim();
+      if (rawMessage.startsWith("Already existing terms:")) {
+        const termPart = rawMessage.replace("Already existing terms:", "").trim();
         const terms = termPart ? termPart.split(",").map((t) => t.trim().toLowerCase()) : [];
         if (terms.length > 0) {
           const existingSet = new Set(terms);
           const existingErrors = entries
             .filter((entry) => existingSet.has(entry.termLower))
-            .map((entry) => `Satır ${entry.lineNo}: Bu term zaten ekli.`);
+            .map((entry) => `Line ${entry.lineNo}: This term already exists.`);
           setBulkErrors(existingErrors);
-          setBulkMsg(`Ekleme yapılmadı. ${existingErrors.length} satır zaten kayıtlı.`);
+          setBulkMsg(`Nothing was added. ${existingErrors.length} lines already exist.`);
           return;
         }
       }
-      if (rawMessage.startsWith("Listede tekrarlı terimler var:")) {
-        setBulkMsg("Ekleme yapılmadı. Listede tekrarlı terimler var.");
+      if (rawMessage.startsWith("Duplicate terms in the list:")) {
+        setBulkMsg("Nothing was added. Duplicate terms in the list.");
         return;
       }
       if (rawMessage) {
@@ -200,8 +200,8 @@ export default function AddWord() {
     // Add Word Page
     <section className="page">
       <header className="page-header">
-        <h2 className="page-title">Yeni Kelime Ekle</h2>
-        <p className="page-subtitle">Kütüphaneni düzenli ve temiz tut.</p>
+        <h2 className="page-title">Add New Word</h2>
+        <p className="page-subtitle">Keep your library clean and organized.</p>
       </header>
       
       <div className="card form-card">
@@ -217,12 +217,12 @@ export default function AddWord() {
           </label>
           
           <label className="field">
-            TR Meaning
+            Turkish Meaning
             <input
               className="input"
               value={meaningTr}
               onChange={(e) => setMeaningTr(e.target.value)}
-              placeholder="havalanmak"
+              placeholder="e.g. Turkish meaning"
             />
           </label>
 
@@ -256,28 +256,24 @@ export default function AddWord() {
         </form>
       </div>
 
-      {msg && (
-        <div className="toast">
-          {msg}
-        </div>
-      )}
+      {msg && <div className="toast">{msg}</div>}
 
       <div className="card form-card">
         <form onSubmit={onBulkSubmit} className="form-grid">
           <label className="field">
-            Toplu Ekleme (term | tr | category | level)
+            Bulk Add (term | tr | category | level)
             <textarea
               className="input"
               rows={8}
               value={bulkText}
               onChange={(e) => setBulkText(e.target.value)}
-              placeholder="take off | havalanmak | phrasal | 3"
+              placeholder="take off | Turkish meaning | phrasal | 3"
             />
           </label>
 
           <div className="form-actions">
             <button className="button primary" type="submit">
-              Toplu Kaydet
+              Save in Bulk
             </button>
           </div>
         </form>
