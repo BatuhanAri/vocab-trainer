@@ -85,7 +85,7 @@ export default function Review() {
   async function grade(g: 0 | 3 | 5) {
     if (!current) return;
     try {
-      await reviewCard(current.id, g, "TR->EN");
+      await reviewCard(current.id, g, "EN->TR");
       setCards((prev) => prev.slice(1)); // UI'den düşür
             setUnlearnedIds((prev) => {
         const next = new Set(prev);
@@ -165,10 +165,10 @@ export default function Review() {
         </div>
       ) : (
         <div className="card review-card">
-          <div className="review-direction">TR → EN</div>
-          <div className="review-prompt">{current.meaning_tr}</div>
+          <div className="review-direction">EN → TR</div>
+          <div className="review-prompt">{current.term}</div>
           <div className="review-answer">
-            <span>Term:</span> {current.term}
+            <span>Türkçe:</span> {current.meaning_tr}
 
           </div>
 

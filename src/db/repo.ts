@@ -14,7 +14,9 @@ export type WordEntry = {
   updated_at: number;
 };
 
-export async function addWord(input: Omit<WordEntry, "id" | "created_at" | "updated_at">) {
+export type NewWordInput = Omit<WordEntry, "id" | "created_at" | "updated_at">;
+
+export async function addWord(input: NewWordInput) {
   const db = await getDb();
   const now = Date.now();
   const id = uuidv4();
@@ -55,6 +57,89 @@ export async function addWord(input: Omit<WordEntry, "id" | "created_at" | "upda
   );
 
   return id;
+}
+
+export async function findExistingTerms(terms: string[]) {
+  if (terms.length === 0) return [];
+  const db = await getDb();
+  const normalized = terms.map((term) => term.trim().toLowerCase());
+  const placeholders = normalized.map(() => "?").join(", ");
+  const rows = await db.select<Array<{ term: string }>>(
+    `SELECT term FROM word_entries WHERE lower(term) IN (${placeholders})`,
+    normalized
+  );
+  return rows.map((row) => row.term.toLowerCase());
+}
+
+export async function addWordsBatch(inputs: NewWordInput[]) {
+  if (inputs.length === 0) return 0;
+
+  const db = await getDb();
+  const now = Date.now();
+
+  const normalizedTerms = inputs.map((input) => input.term.trim());
+  const normalizedLowerTerms = normalizedTerms.map((term) => term.toLowerCase());
+
+  const seen = new Set<string>();
+  const duplicates: string[] = [];
+  for (const term of normalizedLowerTerms) {
+    if (seen.has(term)) {
+      duplicates.push(term);
+    } else {
+      seen.add(term);
+    }
+  }
+  if (duplicates.length > 0) {
+    throw new Error(`Listede tekrarlı terimler var: ${[...new Set(duplicates)].join(", ")}`);
+  }
+
+  const placeholders = normalizedLowerTerms.map(() => "?").join(", ");
+  const existing = await db.select<Array<{ term: string }>>(
+    `SELECT term FROM word_entries WHERE lower(term) IN (${placeholders})`,
+    normalizedLowerTerms
+  );
+  if (existing.length > 0) {
+    throw new Error(`Zaten ekli terimler var: ${existing.map((row) => row.term).join(", ")}`);
+  }
+
+  await db.execute("BEGIN");
+  try {
+    for (const input of inputs) {
+      const id = uuidv4();
+      const normalizedTerm = input.term.trim();
+      const normalizedMeaningTr = input.meaning_tr.trim();
+
+      await db.execute(
+        `INSERT INTO word_entries
+         (id, term, meaning_tr, meaning_en, example_en, part_of_speech, level, notes, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          id,
+          normalizedTerm,
+          normalizedMeaningTr,
+          input.meaning_en ?? null,
+          input.example_en ?? null,
+          input.part_of_speech ?? null,
+          input.level ?? null,
+          input.notes ?? null,
+          now,
+          now,
+        ]
+      );
+
+      await db.execute(
+        `INSERT INTO srs_state (word_entry_id, ease, interval_days, repetitions, due_at, lapses, last_reviewed_at)
+         VALUES (?, 2.5, 0, 0, ?, 0, NULL)`,
+        [id, now]
+      );
+    }
+    await db.execute("COMMIT");
+  } catch (err) {
+    await db.execute("ROLLBACK");
+    throw err;
+  }
+
+  return inputs.length;
 }
 
 export async function listWords(q?: string): Promise<WordEntry[]> {
