@@ -16,6 +16,16 @@ export default function AddWord() {
     return value.replace(/^[\s\u00A0]+|[\s\u00A0]+$/g, "");
   }
 
+  function hasDigit(value: string) {
+    return /\d/.test(value);
+  }
+
+  function stripDigits(value: string) {
+    return value.replace(/\d+/g, "");
+  }
+
+  const levelOptions = [1, 2, 3, 4, 5] as const;
+
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setMsg("");
@@ -25,6 +35,9 @@ export default function AddWord() {
     const normalizedCategory = cleanText(category);
     if (!normalizedTerm || !normalizedMeaningTr || !normalizedCategory || level === "") {
       setMsg("Term, Turkish Meaning, Category, and Level are required.");
+      return;
+    }
+    if (hasDigit(normalizedTerm) || hasDigit(normalizedMeaningTr) || hasDigit(normalizedCategory)) {
       return;
     }
     try {
@@ -99,6 +112,9 @@ export default function AddWord() {
       const [termRaw, trRaw, categoryRaw, levelRaw] = parts;
       if (!termRaw || !trRaw || !categoryRaw || !levelRaw) {
         errors.push(`Line ${lineNo}: All fields are required.`);
+        return;
+      }
+      if (hasDigit(termRaw) || hasDigit(trRaw) || hasDigit(categoryRaw)) {
         return;
       }
 
@@ -245,7 +261,7 @@ export default function AddWord() {
             <input
               className="input"
               value={term}
-              onChange={(e) => setTerm(e.target.value)}
+              onChange={(e) => setTerm(stripDigits(e.target.value))}
               placeholder="take off"
             />
           </label>
@@ -255,7 +271,7 @@ export default function AddWord() {
             <input
               className="input"
               value={meaningTr}
-              onChange={(e) => setMeaningTr(e.target.value)}
+              onChange={(e) => setMeaningTr(stripDigits(e.target.value))}
               placeholder="e.g. Turkish meaning"
             />
           </label>
@@ -265,25 +281,41 @@ export default function AddWord() {
             <input
               className="input"
               value={category}
-              onChange={(e) => setCategory(e.target.value)}
+              onChange={(e) => setCategory(stripDigits(e.target.value))}
               placeholder="phrasal"
             />
           </label>
 
           <label className="field">
-            Level (1-5)
-            <input
-              className="input"
-              type="number"
-              min={1}
-              max={5}
-              value={level}
-              onChange={(e) => setLevel(e.target.value === "" ? "" : Number(e.target.value))}
-            />
+            Level
+            <div className="button-row">
+              {levelOptions.map((option) => (
+                <button
+                  key={option}
+                  type="button"
+                  className={`button ${level === option ? "primary" : "ghost"}`}
+                  onClick={() => setLevel(option)}
+                >
+                  {option}
+                </button>
+              ))}
+            </div>
           </label>
 
           <div className="form-actions">
-            <button className="button primary" type="submit">
+            <button
+              className="button primary"
+              type="submit"
+              disabled={
+                cleanText(term).length === 0 ||
+                cleanText(meaningTr).length === 0 ||
+                cleanText(category).length === 0 ||
+                level === "" ||
+                hasDigit(cleanText(term)) ||
+                hasDigit(cleanText(meaningTr)) ||
+                hasDigit(cleanText(category))
+              }
+            >
               Save Word
             </button>
           </div>
