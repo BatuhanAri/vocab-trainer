@@ -101,6 +101,7 @@ export default function Review() {
     setShowAnswer(false);
   }, [current?.id]);
 
+
   async function grade(g: 0 | 3 | 5) {
     if (!current) return;
     try {
@@ -128,6 +129,7 @@ export default function Review() {
     setDirection(next);
     persistDirection(next);
   }
+
 
   return (
     <section className="page">
