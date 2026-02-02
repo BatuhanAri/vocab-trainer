@@ -10,6 +10,7 @@ export default function AddWord() {
   const [bulkText, setBulkText] = useState("");
   const [bulkErrors, setBulkErrors] = useState<string[]>([]);
   const [bulkMsg, setBulkMsg] = useState("");
+  const [bulkRejectedLines, setBulkRejectedLines] = useState<string[]>([]);
 
   function cleanText(value: string) {
     return value.replace(/^[\s\u00A0]+|[\s\u00A0]+$/g, "");
@@ -134,11 +135,21 @@ export default function AddWord() {
     e.preventDefault();
     setBulkMsg("");
     setBulkErrors([]);
+    setBulkRejectedLines([]);
 
     const { entries, errors } = parseBulkLines(bulkText);
     if (errors.length > 0) {
       setBulkErrors(errors);
       setBulkMsg(`Nothing was added. ${errors.length} invalid lines.`);
+      const rejected = errors
+        .map((err) => {
+          const match = err.match(/Line\s+(\d+)/);
+          return match ? Number(match[1]) : null;
+        })
+        .filter((value): value is number => value !== null)
+        .map((lineNo) => bulkText.split("\n")[lineNo - 1])
+        .filter((line): line is string => typeof line === "string");
+      setBulkRejectedLines(rejected);
       return;
     }
     if (entries.length === 0) {
@@ -156,6 +167,11 @@ export default function AddWord() {
           .map((entry) => `Line ${entry.lineNo}: This term already exists.`);
         setBulkErrors(existingErrors);
         setBulkMsg(`Nothing was added. ${existingErrors.length} lines already exist.`);
+        const rejected = entries
+          .filter((entry) => existingSet.has(entry.termLower))
+          .map((entry) => bulkText.split("\n")[entry.lineNo - 1])
+          .filter((line): line is string => typeof line === "string");
+        setBulkRejectedLines(rejected);
         return;
       }
 
@@ -176,11 +192,17 @@ export default function AddWord() {
             .map((entry) => `Line ${entry.lineNo}: This term already exists.`);
           setBulkErrors(existingErrors);
           setBulkMsg(`Nothing was added. ${existingErrors.length} lines already exist.`);
+          const rejected = entries
+            .filter((entry) => existingSet.has(entry.termLower))
+            .map((entry) => bulkText.split("\n")[entry.lineNo - 1])
+            .filter((line): line is string => typeof line === "string");
+          setBulkRejectedLines(rejected);
           return;
         }
       }
       if (rawMessage.startsWith("Duplicate terms in the list:")) {
         setBulkMsg("Nothing was added. Duplicate terms in the list.");
+        setBulkRejectedLines([]);
         return;
       }
       if (rawMessage) {
@@ -193,6 +215,18 @@ export default function AddWord() {
       } catch {
         setBulkMsg(String(err));
       }
+    }
+  }
+
+  function handleCopyRejected() {
+    if (bulkRejectedLines.length === 0) return;
+    const text = bulkRejectedLines.join("\n");
+    if (navigator?.clipboard?.writeText) {
+      navigator.clipboard.writeText(text).catch(() => {
+        setBulkMsg("Copy failed. Please try again.");
+      });
+    } else {
+      setBulkMsg("Clipboard is not available.");
     }
   }
   // UI
@@ -272,7 +306,11 @@ export default function AddWord() {
           </label>
 
           <div className="form-actions">
-            <button className="button primary" type="submit">
+            <button
+              className="button primary"
+              type="submit"
+              disabled={bulkText.trim().length === 0}
+            >
               Save in Bulk
             </button>
           </div>
@@ -281,6 +319,11 @@ export default function AddWord() {
 
       {bulkErrors.length > 0 && (
         <div className="toast">
+          <div className="form-actions">
+            <button className="button ghost" type="button" onClick={handleCopyRejected}>
+              Copy rejected lines
+            </button>
+          </div>
           <ul>
             {bulkErrors.map((error) => (
               <li key={error}>{error}</li>
