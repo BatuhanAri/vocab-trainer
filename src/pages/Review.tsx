@@ -40,6 +40,7 @@ export default function Review() {
   const [loading, setLoading] = useState(false);
   const [unlearnedIds, setUnlearnedIds] = useState<string[]>([]);
   const [direction, setDirection] = useState<"EN->TR" | "TR->EN">("EN->TR");
+  const [showAnswer, setShowAnswer] = useState(false);
 
 
   async function load() {
@@ -74,13 +75,6 @@ export default function Review() {
     }
   }
 
-  useEffect(() => {
-    const savedIds = readUnlearnedIds();
-    setUnlearnedIds(savedIds);
-    setDirection(readDirection());
-    load();
-  }, []);
-
   async function loadByLevel(minLevel: number, maxLevel: number) {
     setErr("");
     setLoading(true);
@@ -95,6 +89,17 @@ export default function Review() {
   }
 
   const current = cards[0];
+  
+  useEffect(() => {
+    const savedIds = readUnlearnedIds();
+    setUnlearnedIds(savedIds);
+    setDirection(readDirection());
+    load();
+  }, []);
+
+  useEffect(() => {
+    setShowAnswer(false);
+  }, [current?.id]);
 
   async function grade(g: 0 | 3 | 5) {
     if (!current) return;
@@ -144,7 +149,7 @@ export default function Review() {
             onClick={unlearnedCount > 0 ? loadUnlearned : load}
             disabled={loading}
           >
-            Refresh
+            Remember
           </button>
         </div>
       </div>
@@ -189,8 +194,17 @@ export default function Review() {
           </div>
           <div className="review-answer">
             <span>{direction === "EN->TR" ? "Turkish:" : "English:"}</span>{" "}
-            {direction === "EN->TR" ? current.meaning_tr : current.term}
-
+            {showAnswer ? (
+              direction === "EN->TR" ? current.meaning_tr : current.term
+            ) : (
+              <button
+                type="button"
+                className="button ghost"
+                onClick={() => setShowAnswer(true)}
+              >
+                See
+              </button>
+            )}
           </div>
 
           <div className="button-row">
