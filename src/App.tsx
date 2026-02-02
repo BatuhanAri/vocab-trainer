@@ -16,24 +16,24 @@ export default function App() {
             <h1>Track your vocabulary practice</h1>
           </div>
           <nav className="app-nav">
+            <NavLink to="/review" className={({ isActive }) => `nav-link${isActive ? " active" : ""}`}>
+              Review
+            </NavLink>
             <NavLink to="/add" className={({ isActive }) => `nav-link${isActive ? " active" : ""}`}>
               Add Word
             </NavLink>
             <NavLink to="/library" className={({ isActive }) => `nav-link${isActive ? " active" : ""}`}>
               Library
             </NavLink>
-            <NavLink to="/review" className={({ isActive }) => `nav-link${isActive ? " active" : ""}`}>
-              Review
-            </NavLink>
           </nav>
         </header>
 
         <main className="app-content">
           <Routes>
-            <Route path="/" element={<AddWord />} />
+            <Route path="/" element={<Review />} />
+            <Route path="/review" element={<Review />} />
             <Route path="/add" element={<AddWord />} />
             <Route path="/library" element={<Library />} />
-            <Route path="/review" element={<Review />} />
           </Routes>
         </main>
       </div>
