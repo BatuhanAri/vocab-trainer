@@ -213,41 +213,6 @@ export default function Remember() {
     saveRememberProgress(nextProgress);
   }
 
-  function applyAnswer(correct: boolean) {
-    if (!currentWord) return;
-    const currentCount = progress[currentWord.id] ?? 0;
-    let nextIds = [...rememberIds];
-    let nextProgress: RememberProgress = { ...progress };
-
-    if (correct) {
-      const nextCount = currentCount + 1;
-      if (nextCount >= REQUIRED_CORRECT) {
-        nextIds = nextIds.filter((id) => id !== currentWord.id);
-        delete nextProgress[currentWord.id];
-        setFeedback("Üçleme tamamlandı.");
-        setFeedbackType("success");
-      } else {
-        nextProgress[currentWord.id] = nextCount;
-        setFeedback("Doğru!");
-        setFeedbackType("success");
-      }
-    } else {
-      nextProgress = resetRememberProgress(nextProgress, currentWord.id);
-      setFeedback("Yanlış. Tekrar 3 doğru gerekiyor.");
-      setFeedbackType("error");
-    }
-
-    persistState(nextIds, nextProgress);
-
-    if (nextIds.length === 0) {
-      setCurrentId(undefined);
-      return;
-    }
-
-    const nextId = pickRandomId(nextIds, currentWord.id);
-    setCurrentId(nextId);
-  }
-
   function applyTypingAnswer(correct: boolean) {
     if (!currentWord) return;
     const currentCount = progress[currentWord.id] ?? 0;
