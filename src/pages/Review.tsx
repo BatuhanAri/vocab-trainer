@@ -1,27 +1,15 @@
 import { useEffect, useState } from "react";
-import { getCardsByIds, getCardsByLevelRange, getDueCards, reviewCard } from "../db/repo";
+import { getCardsByLevelRange, getDueCards, reviewCard } from "../db/repo";
 import type { DueCard } from "../db/repo";
+import {
+  loadRememberIds,
+  loadRememberProgress,
+  resetRememberProgress,
+  saveRememberIds,
+  saveRememberProgress,
+} from "../core/rememberStore";
 
-const UNLEARNED_STORAGE_KEY = "review.unlearnedIds";
 const DIRECTION_STORAGE_KEY = "review.direction";
-
-function readUnlearnedIds(): string[] {
-  if (typeof window === "undefined") return [];
-  try {
-    const raw = window.localStorage.getItem(UNLEARNED_STORAGE_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-    return parsed.filter((id) => typeof id === "string");
-  } catch {
-    return [];
-  }
-}
-
-function persistUnlearnedIds(ids: string[]) {
-  if (typeof window === "undefined") return;
-  window.localStorage.setItem(UNLEARNED_STORAGE_KEY, JSON.stringify(ids));
-}
 
 function readDirection(): "EN->TR" | "TR->EN" {
   if (typeof window === "undefined") return "EN->TR";
@@ -38,7 +26,7 @@ export default function Review() {
   const [cards, setCards] = useState<DueCard[]>([]);
   const [err, setErr] = useState("");
   const [loading, setLoading] = useState(false);
-  const [unlearnedIds, setUnlearnedIds] = useState<string[]>([]);
+  const [rememberIds, setRememberIds] = useState<string[]>([]);
   const [direction, setDirection] = useState<"EN->TR" | "TR->EN">("EN->TR");
   const [showAnswer, setShowAnswer] = useState(false);
 
@@ -49,25 +37,6 @@ export default function Review() {
     try {
       const res = await getDueCards(50);
       setCards(res);
-    } catch (e: any) {
-      setErr(e?.message ?? "Error");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-    async function loadUnlearned() {
-    setErr("");
-    setLoading(true);
-    try {
-      const res = await getCardsByIds(unlearnedIds);
-      setCards(res);
-      const fetchedIds = new Set(res.map((card) => card.id));
-      if (fetchedIds.size !== unlearnedIds.length) {
-        const nextIds = unlearnedIds.filter((id) => fetchedIds.has(id));
-        setUnlearnedIds(nextIds);
-        persistUnlearnedIds(nextIds);
-      }
     } catch (e: any) {
       setErr(e?.message ?? "Error");
     } finally {
@@ -91,8 +60,8 @@ export default function Review() {
   const current = cards[0];
   
   useEffect(() => {
-    const savedIds = readUnlearnedIds();
-    setUnlearnedIds(savedIds);
+    const savedIds = loadRememberIds();
+    setRememberIds(savedIds);
     setDirection(readDirection());
     load();
   }, []);
@@ -107,23 +76,23 @@ export default function Review() {
     try {
       await reviewCard(current.id, g, direction);
       setCards((prev) => prev.slice(1)); // UI'den düşür
-            setUnlearnedIds((prev) => {
-        const next = new Set(prev);
-        if (g === 5) {
-          next.delete(current.id);
-        } else {
+      if (g !== 5) {
+        setRememberIds((prev) => {
+          const next = new Set(prev);
           next.add(current.id);
-        }
-        const ids = Array.from(next);
-        persistUnlearnedIds(ids);
-        return ids;
-      });
+          const ids = Array.from(next);
+          saveRememberIds(ids);
+          const resetProgress = resetRememberProgress(loadRememberProgress(), current.id);
+          saveRememberProgress(resetProgress);
+          return ids;
+        });
+      }
     } catch (e: any) {
       setErr(e?.message ?? "Review error");
     }
   }
 
-  const unlearnedCount = unlearnedIds.length;
+  const rememberCount = rememberIds.length;
 
   function handleDirectionChange(next: "EN->TR" | "TR->EN") {
     setDirection(next);
@@ -144,15 +113,8 @@ export default function Review() {
         </div>
         <div className="status-actions">
           <div className="status-pill">
-            Unlearned: <strong>{unlearnedCount}</strong>
+            Remember: <strong>{rememberCount}</strong>
           </div>
-          <button
-            className="button ghost"
-            onClick={unlearnedCount > 0 ? loadUnlearned : load}
-            disabled={loading}
-          >
-            Remember
-          </button>
         </div>
       </div>
 

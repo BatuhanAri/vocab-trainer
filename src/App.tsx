@@ -2,6 +2,7 @@ import { HashRouter, Routes, Route, NavLink } from "react-router-dom";
 import AddWord from "./pages/AddWord";
 import Library from "./pages/Library";
 import Review from "./pages/Review";
+import Remember from "./pages/Remember";
 
 import "./App.css";
 
@@ -19,6 +20,9 @@ export default function App() {
             <NavLink to="/review" className={({ isActive }) => `nav-link${isActive ? " active" : ""}`}>
               Review
             </NavLink>
+            <NavLink to="/remember" className={({ isActive }) => `nav-link${isActive ? " active" : ""}`}>
+              Remember
+            </NavLink>
             <NavLink to="/add" className={({ isActive }) => `nav-link${isActive ? " active" : ""}`}>
               Add Word
             </NavLink>
@@ -32,6 +36,7 @@ export default function App() {
           <Routes>
             <Route path="/" element={<Review />} />
             <Route path="/review" element={<Review />} />
+            <Route path="/remember" element={<Remember />} />
             <Route path="/add" element={<AddWord />} />
             <Route path="/library" element={<Library />} />
           </Routes>

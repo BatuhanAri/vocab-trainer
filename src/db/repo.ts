@@ -213,6 +213,23 @@ export async function getCardsByIds(ids: string[]): Promise<DueCard[]> {
     ids
   );
 }
+
+export async function getRandomWords(
+  limit: number,
+  excludeId?: string
+): Promise<WordEntry[]> {
+  const db = await getDb();
+  if (excludeId) {
+    return await db.select<WordEntry[]>(
+      `SELECT * FROM word_entries WHERE id != ? ORDER BY RANDOM() LIMIT ?`,
+      [excludeId, limit]
+    );
+  }
+  return await db.select<WordEntry[]>(
+    `SELECT * FROM word_entries ORDER BY RANDOM() LIMIT ?`,
+    [limit]
+  );
+}
 export async function reviewCard(
   wordId: string,
   grade: 0 | 3 | 5,
