@@ -67,6 +67,12 @@ export default function Remember() {
   const [showHint, setShowHint] = useState(false);
   const [typingResult, setTypingResult] = useState<null | { correct: boolean }>(null);
   const [typingStage, setTypingStage] = useState<"answering" | "feedback">("answering");
+  const [matchingResult, setMatchingResult] = useState<null | { correct: boolean }>(null);
+  const [matchingStage, setMatchingStage] = useState<"answering" | "feedback">("answering");
+  const [matchingPendingNextId, setMatchingPendingNextId] = useState<string | undefined>();
+  const [trueFalseResult, setTrueFalseResult] = useState<null | { correct: boolean }>(null);
+  const [trueFalseStage, setTrueFalseStage] = useState<"answering" | "feedback">("answering");
+  const [trueFalsePendingNextId, setTrueFalsePendingNextId] = useState<string | undefined>();
   const [pendingNextId, setPendingNextId] = useState<string | undefined>();
   const typingInputRef = useRef<HTMLInputElement | null>(null);
   const continueButtonRef = useRef<HTMLButtonElement | null>(null);
@@ -129,6 +135,12 @@ export default function Remember() {
     setTypingResult(null);
     setPendingNextId(undefined);
     setTypingStage("answering");
+    setMatchingResult(null);
+    setMatchingPendingNextId(undefined);
+    setMatchingStage("answering");
+    setTrueFalseResult(null);
+    setTrueFalsePendingNextId(undefined);
+    setTrueFalseStage("answering");
 
     if (!currentWord) return;
 
@@ -271,6 +283,76 @@ export default function Remember() {
     setPendingNextId(nextId);
   }
 
+  function applyMatchingAnswer(correct: boolean) {
+    if (!currentWord) return;
+    const currentCount = progress[currentWord.id] ?? 0;
+    let nextIds = [...rememberIds];
+    let nextProgress: RememberProgress = { ...progress };
+
+    if (correct) {
+      const nextCount = currentCount + 1;
+      if (nextCount >= REQUIRED_CORRECT) {
+        nextIds = nextIds.filter((id) => id !== currentWord.id);
+        delete nextProgress[currentWord.id];
+        setFeedback("Üçleme tamamlandı.");
+        setFeedbackType("success");
+      } else {
+        nextProgress[currentWord.id] = nextCount;
+        setFeedback("Doğru!");
+        setFeedbackType("success");
+      }
+    } else {
+      nextProgress = resetRememberProgress(nextProgress, currentWord.id);
+      setFeedback("Yanlış. Tekrar 3 doğru gerekiyor.");
+      setFeedbackType("error");
+    }
+
+    persistState(nextIds, nextProgress);
+    setMatchingResult({ correct });
+    setMatchingStage("feedback");
+    if (nextIds.length === 0) {
+      setMatchingPendingNextId(undefined);
+      return;
+    }
+    const nextId = pickRandomId(nextIds, currentWord.id);
+    setMatchingPendingNextId(nextId);
+  }
+
+  function applyTrueFalseAnswer(correct: boolean) {
+    if (!currentWord) return;
+    const currentCount = progress[currentWord.id] ?? 0;
+    let nextIds = [...rememberIds];
+    let nextProgress: RememberProgress = { ...progress };
+
+    if (correct) {
+      const nextCount = currentCount + 1;
+      if (nextCount >= REQUIRED_CORRECT) {
+        nextIds = nextIds.filter((id) => id !== currentWord.id);
+        delete nextProgress[currentWord.id];
+        setFeedback("Üçleme tamamlandı.");
+        setFeedbackType("success");
+      } else {
+        nextProgress[currentWord.id] = nextCount;
+        setFeedback("Doğru!");
+        setFeedbackType("success");
+      }
+    } else {
+      nextProgress = resetRememberProgress(nextProgress, currentWord.id);
+      setFeedback("Yanlış. Tekrar 3 doğru gerekiyor.");
+      setFeedbackType("error");
+    }
+
+    persistState(nextIds, nextProgress);
+    setTrueFalseResult({ correct });
+    setTrueFalseStage("feedback");
+    if (nextIds.length === 0) {
+      setTrueFalsePendingNextId(undefined);
+      return;
+    }
+    const nextId = pickRandomId(nextIds, currentWord.id);
+    setTrueFalsePendingNextId(nextId);
+  }
+
   async function handleTypingSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!currentWord) return;
@@ -306,13 +388,47 @@ export default function Remember() {
   }
 
   function handleMatchingSelect(option: Option) {
-    applyAnswer(option.isCorrect);
+    if (matchingStage !== "answering") return;
+    applyMatchingAnswer(option.isCorrect);
   }
 
   function handleTrueFalseSelect(userChoice: boolean) {
     if (!statement) return;
+    if (trueFalseStage !== "answering") return;
     const correct = statement.isCorrect === userChoice;
-    applyAnswer(correct);
+    applyTrueFalseAnswer(correct);
+  }
+
+  function handleMatchingContinue() {
+    if (matchingStage !== "feedback") return;
+    const wasCorrect = matchingResult?.correct ?? false;
+    setMatchingResult(null);
+    setMatchingStage("answering");
+    if (wasCorrect) {
+      const fallbackNextId =
+        matchingPendingNextId ??
+        (currentWord ? pickRandomId(rememberIds, currentWord.id) : undefined);
+      setCurrentId(fallbackNextId);
+    }
+    setFeedback("");
+    setFeedbackType("");
+    setMatchingPendingNextId(undefined);
+  }
+
+  function handleTrueFalseContinue() {
+    if (trueFalseStage !== "feedback") return;
+    const wasCorrect = trueFalseResult?.correct ?? false;
+    setTrueFalseResult(null);
+    setTrueFalseStage("answering");
+    if (wasCorrect) {
+      const fallbackNextId =
+        trueFalsePendingNextId ??
+        (currentWord ? pickRandomId(rememberIds, currentWord.id) : undefined);
+      setCurrentId(fallbackNextId);
+    }
+    setFeedback("");
+    setFeedbackType("");
+    setTrueFalsePendingNextId(undefined);
   }
 
   const currentProgress = currentWord ? progress[currentWord.id] ?? 0 : 0;
@@ -444,10 +560,20 @@ export default function Remember() {
                     key={`${option.label}-${index}`}
                     className="button ghost"
                     onClick={() => handleMatchingSelect(option)}
+                    disabled={matchingStage === "feedback"}
                   >
                     {option.label}
                   </button>
                 ))}
+              {matchingStage === "feedback" && (
+                <button
+                  className="button primary"
+                  type="button"
+                  onClick={handleMatchingContinue}
+                >
+                  {matchingResult?.correct ? "Devam" : "Tekrar et"}
+                </button>
+              )}
             </div>
           )}
 
@@ -463,15 +589,26 @@ export default function Remember() {
                     <button
                       className="button success"
                       onClick={() => handleTrueFalseSelect(true)}
+                      disabled={trueFalseStage === "feedback"}
                     >
                       Doğru
                     </button>
                     <button
                       className="button danger"
                       onClick={() => handleTrueFalseSelect(false)}
+                      disabled={trueFalseStage === "feedback"}
                     >
                       Yanlış
                     </button>
+                    {trueFalseStage === "feedback" && (
+                      <button
+                        className="button primary"
+                        type="button"
+                        onClick={handleTrueFalseContinue}
+                      >
+                        {trueFalseResult?.correct ? "Devam" : "Tekrar et"}
+                      </button>
+                    )}
                   </div>
                 </>
               )}
