@@ -7,6 +7,7 @@ export type SrsState = {
   last_reviewed_at: number | null;
 };
 
+// Applies a lightweight SM-2 update and returns a new SRS state.
 export function applySm2(state: SrsState, grade: 0 | 3 | 5): SrsState {
   const now = Date.now();
 

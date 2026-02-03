@@ -1,6 +1,43 @@
 import { useState } from "react";
 import { addWord, addWordsBatch, findExistingTerms } from "../db/repo";
 
+const LEVEL_OPTIONS = [1, 2, 3, 4, 5] as const;
+const BULK_DELIMITER = "|";
+
+type BulkEntry = {
+  lineNo: number;
+  termLower: string;
+  term: string;
+  meaning_tr: string;
+  part_of_speech: string;
+  level: number;
+  meaning_en: null;
+  example_en: null;
+  notes: null;
+};
+
+function cleanText(value: string) {
+  return value.replace(/^[\s\u00A0]+|[\s\u00A0]+$/g, "");
+}
+
+function hasDigit(value: string) {
+  return /\d/.test(value);
+}
+
+function stripDigits(value: string) {
+  return value.replace(/\d+/g, "");
+}
+
+function formatErrorMessage(err: unknown) {
+  if (typeof err === "string") return err;
+  if (err instanceof Error) return `${err.name}: ${err.message}`;
+  try {
+    return JSON.stringify(err, null, 2);
+  } catch {
+    return String(err);
+  }
+}
+
 export default function AddWord() {
   const [term, setTerm] = useState("");
   const [meaningTr, setMeaningTr] = useState("");
@@ -12,21 +49,17 @@ export default function AddWord() {
   const [bulkMsg, setBulkMsg] = useState("");
   const [bulkRejectedLines, setBulkRejectedLines] = useState<string[]>([]);
 
-  function cleanText(value: string) {
-    return value.replace(/^[\s\u00A0]+|[\s\u00A0]+$/g, "");
-  }
+  const singleFormInvalid =
+    cleanText(term).length === 0 ||
+    cleanText(meaningTr).length === 0 ||
+    cleanText(category).length === 0 ||
+    level === "" ||
+    hasDigit(cleanText(term)) ||
+    hasDigit(cleanText(meaningTr)) ||
+    hasDigit(cleanText(category));
 
-  function hasDigit(value: string) {
-    return /\d/.test(value);
-  }
-
-  function stripDigits(value: string) {
-    return value.replace(/\d+/g, "");
-  }
-
-  const levelOptions = [1, 2, 3, 4, 5] as const;
-
-  async function onSubmit(e: React.FormEvent) {
+// Adds a single word with basic validation (used by the single add form).
+async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setMsg("");
     // input validation
@@ -58,41 +91,14 @@ export default function AddWord() {
       setMsg("Saved ✅");
     } catch (err: unknown) {
       console.error("ADD WORD ERROR (raw):", err);
-
-      // Tauri plugin hataları bazen string gibi gelir
-      if (typeof err === "string") {
-        setMsg(err);
-        return;
-      }
-
-      // JS Error
-      if (err instanceof Error) {
-        setMsg(`${err.name}: ${err.message}`);
-        return;
-      }
-
-      // object ise JSON bas
-      try {
-        setMsg(JSON.stringify(err, null, 2));
-      } catch {
-        setMsg(String(err));
-      }
+      setMsg(formatErrorMessage(err));
     }
   }
 
-  function parseBulkLines(raw: string) {
+// Parses bulk input into entries + error list (used by onBulkSubmit).
+function parseBulkLines(raw: string) {
     const errors: string[] = [];
-    const entries: Array<{
-      lineNo: number;
-      termLower: string;
-      term: string;
-      meaning_tr: string;
-      part_of_speech: string;
-      level: number;
-      meaning_en: null;
-      example_en: null;
-      notes: null;
-    }> = [];
+    const entries: BulkEntry[] = [];
 
     const lines = raw
       .split("\n")
@@ -103,7 +109,7 @@ export default function AddWord() {
 
     lines.forEach((line, index) => {
       const lineNo = index + 1;
-      const parts = line.split("|").map((part) => cleanText(part));
+      const parts = line.split(BULK_DELIMITER).map((part) => cleanText(part));
       if (parts.length !== 4) {
         errors.push(`Line ${lineNo}: Format must be term | tr | category | level.`);
         return;
@@ -147,7 +153,8 @@ export default function AddWord() {
     return { entries, errors };
   }
 
-  async function onBulkSubmit(e: React.FormEvent) {
+// Adds multiple words from a bulk input (bulk form submit handler).
+async function onBulkSubmit(e: React.FormEvent) {
     e.preventDefault();
     setBulkMsg("");
     setBulkErrors([]);
@@ -226,15 +233,12 @@ export default function AddWord() {
         return;
       }
 
-      try {
-        setBulkMsg(JSON.stringify(err, null, 2));
-      } catch {
-        setBulkMsg(String(err));
-      }
+      setBulkMsg(formatErrorMessage(err));
     }
   }
 
-  function handleCopyRejected() {
+// Copies the rejected lines for quick correction (bulk errors).
+function handleCopyRejected() {
     if (bulkRejectedLines.length === 0) return;
     const text = bulkRejectedLines.join("\n");
     if (navigator?.clipboard?.writeText) {
@@ -289,7 +293,7 @@ export default function AddWord() {
           <label className="field">
             Level
             <div className="button-row">
-              {levelOptions.map((option) => (
+              {LEVEL_OPTIONS.map((option) => (
                 <button
                   key={option}
                   type="button"
@@ -306,15 +310,7 @@ export default function AddWord() {
             <button
               className="button primary"
               type="submit"
-              disabled={
-                cleanText(term).length === 0 ||
-                cleanText(meaningTr).length === 0 ||
-                cleanText(category).length === 0 ||
-                level === "" ||
-                hasDigit(cleanText(term)) ||
-                hasDigit(cleanText(meaningTr)) ||
-                hasDigit(cleanText(category))
-              }
+              disabled={singleFormInvalid}
             >
               Save Word
             </button>

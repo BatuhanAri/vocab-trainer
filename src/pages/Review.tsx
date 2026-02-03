@@ -10,7 +10,9 @@ import {
 } from "../core/rememberStore";
 
 const DIRECTION_STORAGE_KEY = "review.direction";
+const REVIEW_LIMIT = 50;
 
+// Persists review direction to localStorage (used by readDirection/handleDirectionChange).
 function readDirection(): "EN->TR" | "TR->EN" {
   if (typeof window === "undefined") return "EN->TR";
   const raw = window.localStorage.getItem(DIRECTION_STORAGE_KEY);
@@ -30,13 +32,12 @@ export default function Review() {
   const [direction, setDirection] = useState<"EN->TR" | "TR->EN">("EN->TR");
   const [showAnswer, setShowAnswer] = useState(false);
 
-
-  async function load() {
+  // Shared loader to keep error/loading handling consistent (used by loadByLevel + initial load).
+  async function loadCards(fetcher: () => Promise<DueCard[]>) {
     setErr("");
     setLoading(true);
     try {
-      const res = await getDueCards(50);
-      setCards(res);
+      setCards(await fetcher());
     } catch (e: any) {
       setErr(e?.message ?? "Error");
     } finally {
@@ -44,17 +45,9 @@ export default function Review() {
     }
   }
 
-  async function loadByLevel(minLevel: number, maxLevel: number) {
-    setErr("");
-    setLoading(true);
-    try {
-      const res = await getCardsByLevelRange(minLevel, maxLevel, 50);
-      setCards(res);
-    } catch (e: any) {
-      setErr(e?.message ?? "Error");
-    } finally {
-      setLoading(false);
-    }
+  // Loads cards filtered by level range (used by difficulty buttons).
+  function loadByLevel(minLevel: number, maxLevel: number) {
+    return loadCards(() => getCardsByLevelRange(minLevel, maxLevel, REVIEW_LIMIT));
   }
 
   const current = cards[0];
@@ -63,7 +56,7 @@ export default function Review() {
     const savedIds = loadRememberIds();
     setRememberIds(savedIds);
     setDirection(readDirection());
-    load();
+    loadCards(() => getDueCards(REVIEW_LIMIT));
   }, []);
 
   useEffect(() => {
@@ -71,6 +64,7 @@ export default function Review() {
   }, [current?.id]);
 
 
+  // Applies the review grade and updates remember list when needed.
   async function grade(g: 0 | 3 | 5) {
     if (!current) return;
     try {

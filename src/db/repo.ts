@@ -1,6 +1,8 @@
 import { v4 as uuidv4 } from "uuid";
 import { getDb } from "./db";
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+
 export type WordEntry = {
   id: string;
   term: string;
@@ -16,12 +18,21 @@ export type WordEntry = {
 
 export type NewWordInput = Omit<WordEntry, "id" | "created_at" | "updated_at">;
 
+function normalizeText(value: string) {
+  return value.trim();
+}
+
+function normalizeLower(value: string) {
+  return value.trim().toLowerCase();
+}
+
+// Adds a new word and initializes its SRS state.
 export async function addWord(input: NewWordInput) {
   const db = await getDb();
   const now = Date.now();
   const id = uuidv4();
-  const normalizedTerm = input.term.trim();
-  const normalizedMeaningTr = input.meaning_tr.trim();
+  const normalizedTerm = normalizeText(input.term);
+  const normalizedMeaningTr = normalizeText(input.meaning_tr);
 
   const existing = await db.select<Array<{ id: string }>>(
     `SELECT id FROM word_entries WHERE lower(term) = lower(?) LIMIT 1`,
@@ -59,10 +70,11 @@ export async function addWord(input: NewWordInput) {
   return id;
 }
 
+// Checks which terms already exist (case-insensitive).
 export async function findExistingTerms(terms: string[]) {
   if (terms.length === 0) return [];
   const db = await getDb();
-  const normalized = terms.map((term) => term.trim().toLowerCase());
+  const normalized = terms.map((term) => normalizeLower(term));
   const placeholders = normalized.map(() => "?").join(", ");
   const rows = await db.select<Array<{ term: string }>>(
     `SELECT term FROM word_entries WHERE lower(term) IN (${placeholders})`,
@@ -71,13 +83,14 @@ export async function findExistingTerms(terms: string[]) {
   return rows.map((row) => row.term.toLowerCase());
 }
 
+// Inserts a batch of words inside a transaction.
 export async function addWordsBatch(inputs: NewWordInput[]) {
   if (inputs.length === 0) return 0;
 
   const db = await getDb();
   const now = Date.now();
 
-  const normalizedTerms = inputs.map((input) => input.term.trim());
+  const normalizedTerms = inputs.map((input) => normalizeText(input.term));
   const normalizedLowerTerms = normalizedTerms.map((term) => term.toLowerCase());
 
   const seen = new Set<string>();
@@ -106,8 +119,8 @@ export async function addWordsBatch(inputs: NewWordInput[]) {
   try {
     for (const input of inputs) {
       const id = uuidv4();
-      const normalizedTerm = input.term.trim();
-      const normalizedMeaningTr = input.meaning_tr.trim();
+      const normalizedTerm = normalizeText(input.term);
+      const normalizedMeaningTr = normalizeText(input.meaning_tr);
 
       await db.execute(
         `INSERT INTO word_entries
@@ -142,6 +155,7 @@ export async function addWordsBatch(inputs: NewWordInput[]) {
   return inputs.length;
 }
 
+// Lists words by optional search query.
 export async function listWords(q?: string): Promise<WordEntry[]> {
   const db = await getDb();
   const query = (q ?? "").trim();
@@ -158,6 +172,7 @@ export async function listWords(q?: string): Promise<WordEntry[]> {
   );
 }
 
+// Deletes a word by id.
 export async function deleteWord(id: string) {
   const db = await getDb();
   await db.execute(`DELETE FROM word_entries WHERE id = ?`, [id]);
@@ -171,6 +186,7 @@ export type DueCard = WordEntry & {
   lapses: number;
 };
 
+// Returns due cards in ascending due order.
 export async function getDueCards(limit = 50): Promise<DueCard[]> {
   const db = await getDb();
   const now = Date.now();
@@ -184,6 +200,8 @@ export async function getDueCards(limit = 50): Promise<DueCard[]> {
     [now, limit]
   );
 }
+
+// Returns cards by level range.
 export async function getCardsByLevelRange(
   minLevel: number,
   maxLevel: number,
@@ -200,6 +218,8 @@ export async function getCardsByLevelRange(
     [minLevel, maxLevel, limit]
   );
 }
+
+// Returns cards by a list of ids.
 export async function getCardsByIds(ids: string[]): Promise<DueCard[]> {
   if (ids.length === 0) return [];
   const db = await getDb();
@@ -214,6 +234,7 @@ export async function getCardsByIds(ids: string[]): Promise<DueCard[]> {
   );
 }
 
+// Returns random words, optionally excluding one id.
 export async function getRandomWords(
   limit: number,
   excludeId?: string
@@ -230,6 +251,8 @@ export async function getRandomWords(
     [limit]
   );
 }
+
+// Updates SRS state and appends a review log entry.
 export async function reviewCard(
   wordId: string,
   grade: 0 | 3 | 5,
@@ -271,7 +294,7 @@ export async function reviewCard(
     ease = Math.min(3.0, ease + 0.05);
   }
 
-  const due_at = now + interval_days * 24 * 60 * 60 * 1000;
+  const due_at = now + interval_days * DAY_MS;
 
   await db.execute(
     `UPDATE srs_state

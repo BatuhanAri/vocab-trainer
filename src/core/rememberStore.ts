@@ -4,6 +4,7 @@ const REMEMBER_IDS_KEY = "remember.wordIds";
 const REMEMBER_PROGRESS_KEY = "remember.progress";
 const LEGACY_UNLEARNED_KEY = "review.unlearnedIds";
 
+// Safely reads a JSON string array from localStorage.
 function readStringArray(key: string): string[] {
   if (typeof window === "undefined") return [];
   try {
@@ -17,6 +18,7 @@ function readStringArray(key: string): string[] {
   }
 }
 
+// Returns remember ids, merging any legacy keys.
 export function loadRememberIds(): string[] {
   const current = readStringArray(REMEMBER_IDS_KEY);
   const legacy = readStringArray(LEGACY_UNLEARNED_KEY);
@@ -27,11 +29,13 @@ export function loadRememberIds(): string[] {
   return merged;
 }
 
+// Persists remember ids.
 export function saveRememberIds(ids: string[]) {
   if (typeof window === "undefined") return;
   window.localStorage.setItem(REMEMBER_IDS_KEY, JSON.stringify(ids));
 }
 
+// Returns progress counts per word id.
 export function loadRememberProgress(): RememberProgress {
   if (typeof window === "undefined") return {};
   try {
@@ -51,15 +55,18 @@ export function loadRememberProgress(): RememberProgress {
   }
 }
 
+// Persists progress counts.
 export function saveRememberProgress(progress: RememberProgress) {
   if (typeof window === "undefined") return;
   window.localStorage.setItem(REMEMBER_PROGRESS_KEY, JSON.stringify(progress));
 }
 
+// Resets a single word's progress.
 export function resetRememberProgress(progress: RememberProgress, id: string): RememberProgress {
   return { ...progress, [id]: 0 };
 }
 
+// Keeps only progress for ids that still exist in remember list.
 export function pruneRememberProgress(
   progress: RememberProgress,
   ids: string[]

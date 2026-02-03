@@ -1,17 +1,18 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { deleteWord, listWords } from "../db/repo";
 import type { WordEntry } from "../db/repo";
 
+const ALL_FILTER = "all";
 
 export default function Library() {
   const [q, setQ] = useState("");
   const [items, setItems] = useState<WordEntry[]>([]);
   const [err, setErr] = useState<string>("");
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [categoryFilter, setCategoryFilter] = useState("all");
-  const [levelFilter, setLevelFilter] = useState("all");
+  const [categoryFilter, setCategoryFilter] = useState(ALL_FILTER);
+  const [levelFilter, setLevelFilter] = useState(ALL_FILTER);
 
-
+  // Fetches library items optionally filtered by search query (used by search + reset).
   async function load(query?: string) {
     setErr("");
     try {
@@ -26,20 +27,24 @@ export default function Library() {
     load("");
   }, []);
 
-  const categories = Array.from(
-    new Set(items.map((item) => item.part_of_speech).filter((value): value is string => !!value))
-  ).sort((a, b) => a.localeCompare(b));
+  const categories = useMemo(() => {
+    const values = items
+      .map((item) => item.part_of_speech)
+      .filter((value): value is string => Boolean(value));
+    return Array.from(new Set(values)).sort((a, b) => a.localeCompare(b));
+  }, [items]);
 
   const filteredItems = items.filter((item) => {
     const categoryOk =
-      categoryFilter === "all" ||
+      categoryFilter === ALL_FILTER ||
       (item.part_of_speech ?? "").toLowerCase() === categoryFilter;
     const levelOk =
-      levelFilter === "all" || String(item.level ?? "") === levelFilter;
+      levelFilter === ALL_FILTER || String(item.level ?? "") === levelFilter;
     return categoryOk && levelOk;
   });
 
- async function handleDelete(word: WordEntry) {
+  // Deletes a word with confirmation and keeps the list in sync (used by delete button).
+  async function handleDelete(word: WordEntry) {
     const confirmed = window.confirm(`Delete "${word.term}"?`);
     if (!confirmed) return;
     setDeletingId(word.id);
@@ -100,12 +105,11 @@ export default function Library() {
           <button
             onClick={() => {
               setQ("");
-              setCategoryFilter("all");
-              setLevelFilter("all");
+              setCategoryFilter(ALL_FILTER);
+              setLevelFilter(ALL_FILTER);
               load("");
             }}
-                        className="button ghost"
-
+            className="button ghost"
           >
             Reset
           </button>
@@ -150,5 +154,6 @@ export default function Library() {
           ))}
         </div>
       )}
-    </section>  );
+    </section>
+  );
 }
