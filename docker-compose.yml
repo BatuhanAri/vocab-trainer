@@ -1,0 +1,19 @@
+services:
+  web:
+    build: .
+    command: sh -c "pnpm install && pnpm dev -- --host 0.0.0.0 --port 5173"
+    ports:
+      - "5173:5173"
+    volumes:
+      - .:/app
+      - /app/node_modules
+    environment:
+      - CI=true
+      - CHOKIDAR_USEPOLLING=true
+  web_prod:
+    build: .
+    command: sh -c "pnpm build && pnpm preview -- --host 0.0.0.0 --port 4173"
+    ports:
+      - "4173:4173"
+    profiles:
+      - prod
