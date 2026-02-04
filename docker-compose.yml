@@ -3,11 +3,13 @@ services:
     build: .
     command: sh -c "pnpm install && pnpm dev -- --host 0.0.0.0 --port 5173"
     ports:
-      - "5173:5173"
+      - "127.0.0.1:5173:5173"
     volumes:
       - .:/app
       - /app/node_modules
     environment:
+      - VITE_HOST=0.0.0.0
+      - VITE_PORT=5173
       - CI=true
       - CHOKIDAR_USEPOLLING=true
   web_prod:

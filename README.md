@@ -118,6 +118,11 @@ Open in browser:
 http://localhost:4173
 ```
 
+## Security Notes
+
+- CSP is enabled for production. If you use external sources, update the `csp` field in `src-tauri/tauri.conf.json`.
+- In Docker Compose, the dev server is bound only to `127.0.0.1` (not exposed to the LAN).
+
 ## Bulk Add Format
 
 Each line must follow this format:
@@ -294,6 +299,11 @@ Tarayıcıdan aç:
 ```text
 http://localhost:4173
 ```
+
+## Güvenlik Notları
+
+- Tauri CSP üretim için aktiftir. Harici kaynak kullanırsan `src-tauri/tauri.conf.json` içindeki `csp` alanını güncelle.
+- Docker Compose’da dev sunucusu yalnızca `127.0.0.1` üzerinden erişilebilir (ağa açık değildir).
 ## Toplu Kelime Ekleme Formatı
 
 Her satır şu formatta olmalı:
