@@ -304,6 +304,72 @@ http://localhost:4173
 
 - Tauri CSP üretim için aktiftir. Harici kaynak kullanırsan `src-tauri/tauri.conf.json` içindeki `csp` alanını güncelle.
 - Docker Compose’da dev sunucusu yalnızca `127.0.0.1` üzerinden erişilebilir (ağa açık değildir).
+
+## Security Audit Notes
+
+### Commands Run
+
+#### `pnpm audit --production`
+
+Result:
+```
+ERR_PNPM_AUDIT_BAD_RESPONSE The audit endpoint (at https://registry.npmjs.org/-/npm/v1/security/audits) responded with 403: Forbidden
+```
+
+#### `npm audit --production`
+
+Result:
+```
+npm warn config production Use `--omit=dev` instead.
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+npm error code ENOLOCK
+npm error audit This command requires an existing lockfile.
+npm error audit Try creating one first with: npm i --package-lock-only
+npm error audit Original error: loadVirtual requires existing shrinkwrap file
+```
+
+### Notes
+
+- `pnpm audit` could not reach the npm audit endpoint due to a 403 response. This is likely caused by network/proxy/registry access policies in the current environment.
+- `npm audit` could not run because the project does not include a `package-lock.json`. Since the project uses pnpm, generating a npm lockfile may not be desirable.
+
+### Next Steps
+
+- Re-run `pnpm audit --production` in an environment where the npm audit endpoint is accessible.
+- If you prefer `npm audit`, generate a `package-lock.json` with `npm i --package-lock-only` and retry.
+
+## Güvenlik Denetimi Notları
+
+### Çalıştırılan Komutlar
+
+#### `pnpm audit --production`
+
+Sonuç:
+```
+ERR_PNPM_AUDIT_BAD_RESPONSE The audit endpoint (at https://registry.npmjs.org/-/npm/v1/security/audits) responded with 403: Forbidden
+```
+
+#### `npm audit --production`
+
+Sonuç:
+```
+npm warn config production Use `--omit=dev` instead.
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+npm error code ENOLOCK
+npm error audit This command requires an existing lockfile.
+npm error audit Try creating one first with: npm i --package-lock-only
+npm error audit Original error: loadVirtual requires existing shrinkwrap file
+```
+
+### Notlar
+
+- `pnpm audit` npm audit endpoint’ine 403 hatası nedeniyle erişemedi. Bu durum genellikle mevcut ortamda ağ/proxy/registry erişim politikalarından kaynaklanır.
+- `npm audit`, projede `package-lock.json` olmadığı için çalışmadı. Proje pnpm kullandığından npm lockfile üretmek tercih edilmeyebilir.
+
+### Sonraki Adımlar
+
+- npm audit endpoint’ine erişilebilen bir ortamda `pnpm audit --production` yeniden çalıştırılmalı.
+- Eğer `npm audit` tercih edilecekse `npm i --package-lock-only` ile lockfile oluşturulup tekrar denenmeli.
 ## Toplu Kelime Ekleme Formatı
 
 Her satır şu formatta olmalı:
