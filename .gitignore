@@ -1,22 +1,28 @@
-# Node
+# Node / Vite
 node_modules/
 dist/
 .vite/
-pnpm-lock.yaml
+.pnpm-store/
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Env files
+.env
+.env.*
+
+# OS / Editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Coverage
+coverage/
 
 # Tauri / Rust
 src-tauri/target/
-src-tauri/gen/
-*.log
-
-# OS
-.DS_Store
-
-# Local DB / backups
-*.db
-*.sqlite
-*.sqlite3
-
-# Env
-.env
-.env.*
+src-tauri/.cargo/
+.rustc_info.json
